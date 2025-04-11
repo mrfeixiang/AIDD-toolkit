@@ -1,0 +1,329 @@
+# Korean Translation Guide for Scientific Literature
+
+This guide provides resources and workflows for translating scientific papers and journals between Korean and English, specifically optimized for pharmaceutical and chemical research.
+
+## Table of Contents
+- [AI Translation Tools](#ai-translation-tools)
+- [Specialized Terminology Handling](#specialized-terminology-handling)
+- [Workflow for Journal Translation](#workflow-for-journal-translation)
+- [Common Challenges and Solutions](#common-challenges-and-solutions)
+- [Custom Scripts and Tools](#custom-scripts-and-tools)
+- [Team Collaboration](#team-collaboration)
+
+## AI Translation Tools
+
+### Primary Tools for Korean-English Translation
+
+| Tool | Strengths | Best For | Link |
+|------|-----------|----------|------|
+| Naver Papago | • Specialized in Korean-English<br>• Strong at scientific terms<br>• Context-aware translation | Scientific papers with Korean terminology | [Papago](https://papago.naver.com/) |
+| DeepL | • High accuracy for technical content<br>• Preserves formatting<br>• API available | Longer documents, maintaining document structure | [DeepL](https://www.deepl.com/) |
+| Google Translate | • Large language database<br>• Quick translation<br>• OCR capabilities | Quick reference, image-based text | [Google Translate](https://translate.google.com/) |
+
+### Specialized Translation Tools
+
+| Tool | Description | Link |
+|------|-------------|------|
+| MediBERT-KO | BERT model fine-tuned on Korean medical corpus | [GitHub](https://github.com/kiyoungkim1/MediBERT-KO) |
+| KoBERT-SciBERT | Scientific Korean BERT model | [GitHub](https://github.com/snunlp/KR-BERT-SCI) |
+| K-SciBERT | Korean scientific literature transformer | [GitHub](https://github.com/kiyoungkim1/K-SciBERT) |
+
+## Specialized Terminology Handling
+
+### Chemistry and Pharmaceutical Term Databases
+
+| Resource | Description | Link |
+|----------|-------------|------|
+| KoRMedDB | Korean-English medical terminology database | [Website](https://kormed.org/) |
+| KISTI Science Glossary | Korean scientific terminology database | [Website](https://www.kisti.re.kr/) |
+| ChemKorDic | Chemistry Korean-English Dictionary | [GitHub](https://github.com/snunlp/ChemKorDic) |
+
+### Custom Terminology Management
+
+Create team-specific terminology databases for consistent translations:
+
+```python
+# Example of a simple terminology management script
+import csv
+import re
+
+# Load terminology database
+term_dict = {}
+with open('chem_terms.csv', 'r', encoding='utf-8') as f:
+    reader = csv.reader(f)
+    next(reader)  # Skip header
+    for row in reader:
+        korean_term, english_term = row
+        term_dict[korean_term] = english_term
+
+# Function to replace terms in translated text
+def apply_terminology(translated_text):
+    for kr_term, en_term in term_dict.items():
+        translated_text = re.sub(r'\b' + re.escape(kr_term) + r'\b', en_term, translated_text)
+    return translated_text
+```
+
+## Workflow for Journal Translation
+
+### Step-by-Step Process
+
+1. **Document Preparation**
+   - Extract text from PDF using OCR tools if necessary
+   - Segment document into manageable sections
+
+2. **Initial Translation**
+   - Process through primary translation tool (Papago recommended for Korean)
+   - Preserve formatting and structure
+
+3. **Terminology Review**
+   - Apply specialized terminology database
+   - Review chemical and pharmaceutical terms for accuracy
+
+4. **Scientific Context Validation**
+   - Review by subject matter expert
+   - Verify scientific accuracy and context
+
+5. **Formatting and Finalization**
+   - Restore document formatting
+   - Add citations and references
+   - Quality assurance check
+
+### Automation Script Example
+
+```python
+# Example workflow automation script
+import requests
+import json
+import csv
+from custom_ocr import extract_text_from_pdf  # Your OCR module
+
+def translate_scientific_paper(pdf_path, source_lang="ko", target_lang="en"):
+    # Extract text from PDF
+    sections = extract_text_from_pdf(pdf_path)
+    
+    translated_sections = []
+    
+    # Translate each section
+    for section in sections:
+        # Call translation API (example using Papago)
+        translated = translate_with_papago(section, source_lang, target_lang)
+        
+        # Apply terminology database
+        translated = apply_terminology(translated)
+        
+        translated_sections.append(translated)
+    
+    # Combine and format results
+    final_document = format_scientific_paper(translated_sections)
+    
+    return final_document
+
+def translate_with_papago(text, source_lang, target_lang):
+    # Implementation of Papago API call
+    # This is a placeholder - implement actual API call
+    url = "https://openapi.naver.com/v1/papago/n2mt"
+    headers = {
+        "X-Naver-Client-Id": "YOUR_CLIENT_ID",
+        "X-Naver-Client-Secret": "YOUR_CLIENT_SECRET"
+    }
+    data = {
+        "source": source_lang,
+        "target": target_lang,
+        "text": text
+    }
+    
+    response = requests.post(url, headers=headers, data=data)
+    result = json.loads(response.text)
+    
+    return result["message"]["result"]["translatedText"]
+```
+
+## Common Challenges and Solutions
+
+### Challenge: Chemical Formula Translation
+
+**Solution**: 
+- Use regex patterns to identify and protect chemical formulas
+- Skip translation for formulas and mathematical expressions
+
+```python
+def protect_chemical_formulas(text):
+    # Find and protect chemical formulas with regex
+    formula_pattern = r'([A-Z][a-z]?\d*)+(\([A-Z][a-z]?\d*\)\d*)*'
+    protected_text = re.sub(formula_pattern, lambda m: f"[FORMULA]{m.group(0)}[/FORMULA]", text)
+    return protected_text
+
+def restore_chemical_formulas(translated_text):
+    # Restore protected formulas
+    formula_pattern = r'\[FORMULA\](.*?)\[\/FORMULA\]'
+    restored_text = re.sub(formula_pattern, lambda m: m.group(1), translated_text)
+    return restored_text
+```
+
+### Challenge: Context-Specific Terminology
+
+**Solution**:
+- Create domain-specific terminology lists
+- Use machine learning to detect context and apply appropriate translations
+
+### Challenge: Formatting Preservation
+
+**Solution**:
+- Split document into content and structure
+- Translate content only
+- Reapply structure after translation
+
+## Custom Scripts and Tools
+
+### PDF Processing Script
+
+```python
+# Example script for processing Korean scientific PDFs
+import fitz  # PyMuPDF
+import pytesseract
+from PIL import Image
+import numpy as np
+import re
+
+def process_korean_scientific_pdf(pdf_path):
+    # Open PDF
+    doc = fitz.open(pdf_path)
+    full_text = ""
+    
+    for page_num in range(len(doc)):
+        page = doc.load_page(page_num)
+        
+        # Check if text can be extracted directly
+        text = page.get_text()
+        
+        # If little text is extracted, use OCR
+        if len(text.strip()) < 100:  # Arbitrary threshold
+            pix = page.get_pixmap()
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            text = pytesseract.image_to_string(img, lang='kor+eng')
+        
+        # Process extracted text
+        text = clean_scientific_text(text)
+        full_text += text + "\n\n"
+    
+    return full_text
+
+def clean_scientific_text(text):
+    # Remove page numbers
+    text = re.sub(r'\n\s*\d+\s*\n', '\n', text)
+    
+    # Fix broken paragraphs
+    text = re.sub(r'(?<=[^\n])\n(?=[^\n])', ' ', text)
+    
+    # Preserve chemical formulas, etc.
+    text = protect_special_content(text)
+    
+    return text
+```
+
+### Terminology Extractor
+
+```python
+# Script to automatically extract potential terminology
+import spacy
+from collections import Counter
+
+def extract_potential_terminology(korean_text, english_text):
+    # Load NLP models
+    nlp_ko = spacy.load("ko_core_news_sm")
+    nlp_en = spacy.load("en_core_sci_sm")  # Scientific English model
+    
+    # Process texts
+    doc_ko = nlp_ko(korean_text)
+    doc_en = nlp_en(english_text)
+    
+    # Extract noun phrases
+    ko_terms = [chunk.text for chunk in doc_ko.noun_chunks]
+    en_terms = [chunk.text for chunk in doc_en.noun_chunks]
+    
+    # Count frequencies
+    ko_counter = Counter(ko_terms)
+    en_counter = Counter(en_terms)
+    
+    # Find potential terminology (terms that appear frequently)
+    ko_potential = [term for term, count in ko_counter.most_common(50) if count > 1]
+    en_potential = [term for term, count in en_counter.most_common(50) if count > 1]
+    
+    return ko_potential, en_potential
+```
+
+## Team Collaboration
+
+### Translation Memory System
+
+Implement a shared translation memory system to maintain consistency across team translations:
+
+1. **Setup a Git Repository for Terminology**
+   - Store CSV files with Korean-English term pairs
+   - Allow team contributions via pull requests
+
+2. **Web Interface for Term Management**
+   - Create a simple web app for terminology lookup
+   - Allow team members to add new terms
+
+3. **Review Process**
+   - Establish a peer review workflow for translations
+   - Maintain quality control through SME validation
+
+### API Integration
+
+Integrate translation APIs into your team's workflow:
+
+```python
+# Example integration with multiple translation APIs
+def translate_with_fallback(text, source="ko", target="en"):
+    # Try primary translation service
+    try:
+        translated = translate_with_papago(text, source, target)
+        return translated
+    except Exception as e:
+        print(f"Papago failed: {e}")
+    
+    # Fallback to DeepL
+    try:
+        translated = translate_with_deepl(text, source, target)
+        return translated
+    except Exception as e:
+        print(f"DeepL failed: {e}")
+    
+    # Fallback to Google
+    try:
+        translated = translate_with_google(text, source, target)
+        return translated
+    except Exception as e:
+        print(f"All translation services failed")
+        return None
+```
+
+## Resources and References
+
+- [Korean Chemical Society Terminology Guide](http://www.kcsnet.or.kr/)
+- [KISTI Science and Technology Translation Center](https://www.kisti.re.kr/)
+- [Korean Medical Journal Translation Resources](https://kamje.or.kr/)
+
+---
+
+## Appendix: Common Chemical and Pharmaceutical Terms
+
+| Korean | English |
+|--------|---------|
+| 약물 전달 시스템 | Drug Delivery System |
+| 제형 | Formulation |
+| 생체이용률 | Bioavailability |
+| 약물동태학 | Pharmacokinetics |
+| 약력학 | Pharmacodynamics |
+| 대사체 | Metabolite |
+| 화학구조 | Chemical Structure |
+| 합성 경로 | Synthetic Route |
+| 수율 | Yield |
+| 정제 | Purification |
+| 크로마토그래피 | Chromatography |
+| 분자 도킹 | Molecular Docking |
+| 생물학적 활성 | Biological Activity |
+| 효소 저해제 | Enzyme Inhibitor |
+| 약물-수용체 상호작용 | Drug-Receptor Interaction |
