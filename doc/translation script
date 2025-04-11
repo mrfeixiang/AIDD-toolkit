@@ -1,0 +1,35 @@
+# Create a translation script
+cat > src/translation/translate_paper.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Example script for translating scientific papers between Korean and English
+"""
+import argparse
+import re
+
+def protect_chemical_formulas(text):
+    # Find and protect chemical formulas with regex
+    formula_pattern = r'([A-Z][a-z]?\d*)+(\([A-Z][a-z]?\d*\)\d*)*'
+    protected_text = re.sub(formula_pattern, lambda m: f"[FORMULA]{m.group(0)}[/FORMULA]", text)
+    return protected_text
+
+def main():
+    parser = argparse.ArgumentParser(description='Translate scientific papers between Korean and English')
+    parser.add_argument('input_file', help='Path to the input file')
+    parser.add_argument('output_file', help='Path to the output file')
+    parser.add_argument('--source', default='ko', help='Source language (default: ko)')
+    parser.add_argument('--target', default='en', help='Target language (default: en)')
+    
+    args = parser.parse_args()
+    
+    print(f"This script would translate from {args.source} to {args.target}")
+    print(f"Input file: {args.input_file}")
+    print(f"Output file: {args.output_file}")
+    print("Note: This is a placeholder. Integration with actual API keys needed.")
+
+if __name__ == '__main__':
+    main()
+EOF
+
+# Make it executable
+chmod +x src/translation/translate_paper.py
